@@ -4,8 +4,6 @@ App local (una sola máquina, sin dependencias npm) para analizar **por lote** s
 generada por IA usando **ACRCloud AI Music Detection**, con cola, progreso, resultado en porcentaje,
 fuente probable (Suno, Udio, ElevenLabs…) y exportación a CSV.
 
-![flujo](https://docs.acrcloud.com/~gitbook/image?url=https%3A%2F%2F3988867552-files.gitbook.io%2F~%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252F-MDsYO9aM-g3c7UMRXcF%252Ficon%252FuSXirl1SXux7EVe4m7D2%252Facrcloud.png%3Falt%3Dmedia%26token%3D4060c2a6-985c-4cae-9c63-66ef5c9ff567&width=32&dpr=3&quality=100&sign=e3f4a9f15808634b69a8979bb58ce561&sv=3)
-
 ## 1. Qué hace
 
 - Arrastras **muchas canciones** (MP3, WAV, FLAC, M4A, OGG, MP4…).
@@ -128,6 +126,9 @@ resumen, además de casos del parser (stems, segmentos, umbral 50 %, CSV).
 
 ## 9. Límites y avisos
 
+- **Credenciales fuera del repositorio.** El token y los audios viven en `data/`, excluido por
+  `.gitignore`. No hay claves en el código ni en el historial. Si alguna vez publicas el proyecto,
+  revisa `git log -p` antes.
 - ACRCloud cobra por tiempo/proyecto: revisa tu plan antes de lotes grandes.
 - Archivos de más de 900 s deben dividirse; la app mostrará el error de la API.
 - El contenedor se crea por lote; puedes borrarlos desde Ajustes.
