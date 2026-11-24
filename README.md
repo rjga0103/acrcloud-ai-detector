@@ -14,6 +14,8 @@ fuente probable (Suno, Udio, ElevenLabs…) y exportación a CSV.
   - **Fuente probable** (Suno, Udio, Sonauto/Treblo, Mureka, Riffusion, Seedmusic, Minimax, ElevenLabs, Lyria, Boomy, Humano).
   - Desglose por **stem** (voz / acompañamiento / original), **fuentes** y **segmentos**.
 - Cola persistente (sobrevive reinicios), reintentos, cancelar, borrar, buscador, filtros y **CSV**.
+- **Un solo contenedor de File Scanning**, reutilizado entre lotes y reinicios. Evita el error
+  `Your containers exceeds limits` de los planes con cupo pequeño.
 
 ## 2. Cómo se usa
 
@@ -37,7 +39,7 @@ incluye `ai_detection`). Está en **Console API v2 → File Scanning**:
 
 | Paso | Llamada |
 | --- | --- |
-| 1. Crear contenedor | `POST https://api-v2.acrcloud.com/api/fs-containers` con `engine: 5`, `region`, `audio_type`, `buckets`, `policy.ai_detection: 1` |
+| 1. Crear contenedor | `POST https://api-v2.acrcloud.com/api/fs-containers` con `engine: 5`, `region`, `audio_type`, `buckets`, `policy.ai_detection: 1`. Se crea **una vez** y se reutiliza (se busca por nombre/región/engine). |
 | 2. URL prefirmada | `GET https://api-{region}.acrcloud.com/api/fs-containers/{id}/presigned-upload?filename=…` |
 | 3. Subir a S3 | `PUT {presigned_url}` sin cabecera Authorization |
 | 4. Avisar a ACRCloud | `POST …/api/fs-containers/{id}/files` con `{data_type:"audio", key, filename}` |
@@ -131,6 +133,9 @@ resumen, además de casos del parser (stems, segmentos, umbral 50 %, CSV).
   revisa `git log -p` antes.
 - ACRCloud cobra por tiempo/proyecto: revisa tu plan antes de lotes grandes.
 - Archivos de más de 900 s deben dividirse; la app mostrará el error de la API.
-- El contenedor se crea por lote; puedes borrarlos desde Ajustes.
+- **Límite de contenedores.** La app usa un contenedor fijo (`ACRCloud AI Detector`) por combinación
+  región + engine y lo reutiliza. Si aun así aparece `Your containers exceeds limits`, ve a
+  **Ajustes → Borrar contenedores remotos**: elimina los de esta app y, si quedan ajenos, ofrece
+  borrarlos también. La cola se recupera sola: si el plan está lleno, purga lo suyo y reintenta una vez.
 - Un token caducado devuelve 401: genera uno nuevo y pégalo en Ajustes.
 - Los resultados son orientativos. No los uses como única prueba en decisiones legales o de moderación.

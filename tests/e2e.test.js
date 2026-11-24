@@ -39,7 +39,10 @@ const fake = http.createServer(async (req, res) => {
   };
 
   if (req.method === 'POST' && url.pathname === '/api/fs-containers') {
-    return send(201, { data: { id: 777, region: 'eu-west-1', name: 'test' } });
+    return send(201, { data: { id: 777, region: 'eu-west-1', name: 'ACRCloud AI Detector' } });
+  }
+  if (req.method === 'GET' && url.pathname === '/api/fs-containers') {
+    return send(200, { data: [], meta: { current_page: 1, last_page: 1, total: 0 } });
   }
   if (req.method === 'GET' && url.pathname === '/api/fs-containers/777/presigned-upload') {
     presignCalls += 1;
@@ -113,7 +116,7 @@ test('flujo completo: contenedor, S3 prefirmado, metadata, poll y resumen', asyn
   assert.equal(presignCalls, 1);
   assert.equal(metadataCalls, 1);
   assert.ok(polls >= 2);
-  assert.equal(store.state.containers['b-test'], 777);
+  assert.equal(store.state.container.id, 777);
 });
 
 test.after(async () => {

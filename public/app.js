@@ -32,6 +32,7 @@ const app = {
   config: null,
   files: [],
   counts: {},
+  container: null,
   uploads: { active: 0, total: 0, loaded: 0, size: 0, ok: 0, failed: 0 }
 };
 
@@ -108,6 +109,7 @@ async function refresh() {
     app.config = data.config;
     app.files = data.files;
     app.counts = data.counts;
+    app.container = data.container;
     renderChrome();
     if (changed) renderTable();
   } catch (err) {
@@ -132,7 +134,8 @@ function renderChrome() {
     els.statusChip.className = 'chip bad';
     els.demoBanner.classList.add('hidden');
   }
-  els.footerConfig.textContent = `Región ${c.region} · engine ${c.engine} · paralelo ${c.concurrency}.`;
+  els.footerConfig.textContent =
+    `Región ${c.region} · engine ${c.engine} · paralelo ${c.concurrency} · contenedor ${app.container?.id || '—'}.`;
 
   const active = (app.counts.uploading || 0) + (app.counts.processing || 0);
   els.stats.total.textContent = app.files.length;
@@ -559,11 +562,23 @@ document.getElementById('btnTest').addEventListener('click', testConnection);
 document.getElementById('btnResetContainers').addEventListener('click', async () => {
   if (!confirm('¿Borrar los contenedores de File Scanning creados por esta app en ACRCloud?')) return;
   settingsMsg.textContent = 'Borrando…';
+  settingsMsg.className = 'settings-msg';
   try {
-    const data = await postJson('/api/container/reset', {});
-    const ok = data.results.filter((r) => r.deleted).length;
-    settingsMsg.textContent = `${ok} contenedor(es) borrados`;
+    let data = await postJson('/api/container/reset', {});
+    let msg = `${data.deleted} contenedor(es) borrados`;
+    if (data.failed?.length) msg += ` · ${data.failed.length} con error`;
+    if (data.remaining?.length) {
+      const names = data.remaining.map((c) => `${c.name || 'sin nombre'} (#${c.id})`).join(', ');
+      if (confirm(`Quedan ${data.remaining.length} contenedor(es) ajenos:\n${names}\n\n¿Borrar también TODOS?`)) {
+        const all = await postJson('/api/container/reset', { all: true });
+        msg = `Borrados ${data.deleted + all.deleted} contenedor(es) en total` + (all.failed?.length ? ` · ${all.failed.length} con error` : '');
+      } else {
+        msg += ` · quedan ${data.remaining.length}`;
+      }
+    }
+    settingsMsg.textContent = msg;
     settingsMsg.className = 'settings-msg ok';
+    await refresh();
   } catch (err) {
     settingsMsg.textContent = err.message;
     settingsMsg.className = 'settings-msg bad';

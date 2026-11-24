@@ -176,6 +176,7 @@ const routes = [
       config: sanitizeConfig(cfg),
       files: store.state.files.map(store.publicFile),
       counts: store.countByStatus(),
+      container: store.state.container,
       containers: store.state.containers,
       uptime: process.uptime()
     });
@@ -269,19 +270,27 @@ const routes = [
   }],
 
   ['POST', /^\/api\/container\/reset$/, async (req, res) => {
+    const body = await readJson(req).catch(() => ({}));
     const cfg = getConfig();
-    const results = [];
-    for (const [batchId, containerId] of Object.entries(store.state.containers)) {
-      try {
-        await acr.deleteContainer(cfg, containerId);
-        results.push({ batchId, containerId, deleted: true });
-      } catch (err) {
-        results.push({ batchId, containerId, deleted: false, error: err.message });
-      }
+    const keepId = store.state.container?.id ?? null;
+    const result = await acr.purgeContainers(cfg, { all: body.all === true, keepId });
+    const removedActive =
+      store.state.container && result.deleted.some((d) => String(d.id) === String(store.state.container.id));
+    if (removedActive) {
+      store.state.container = null;
+      store.save();
     }
-    store.state.containers = {};
-    store.save();
-    sendJson(res, 200, { results });
+    if (result.remaining.length === 0) {
+      store.state.container = null;
+      store.state.containers = {};
+      store.save();
+    }
+    sendJson(res, 200, {
+      total: result.total,
+      deleted: result.deleted.length,
+      failed: result.failed,
+      remaining: result.remaining.map((c) => ({ id: c.id, name: c.name }))
+    });
   }],
 
   ['GET', /^\/api\/export\.csv$/, async (req, res) => {
