@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ACRCloud AI Detector</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%B5%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🎵</div>
+      <div>
+        <h1>ACRCloud AI Detector</h1>
+        <p>¿La canción es de IA? Análisis por lote con cola</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="statusChip" class="chip">Cargando…</span>
+      <button class="btn ghost" id="btnHelp">Cómo funciona</button>
+      <button class="btn ghost" id="btnSettings">⚙ Ajustes</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="demoBanner" class="banner hidden">
+      <strong>Modo demo.</strong> Resultados simulados, sin llamadas a ACRCloud. Añade tu API token en Ajustes para analizar de verdad.
+    </section>
+
+    <section id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Subir canciones">
+      <input id="fileInput" type="file" multiple accept="audio/*,video/mp4,video/webm" hidden />
+      <div class="dz-icon">⬆</div>
+      <h2>Arrastra tus canciones aquí</h2>
+      <p>o <span class="link">selecciona archivos</span> · MP3, WAV, FLAC, M4A, OGG, MP4… · subida por lote</p>
+      <p class="hint">ACRCloud admite hasta 15 minutos por archivo. Todo se analiza en cola.</p>
+    </section>
+
+    <section id="uploadStatus" class="upload-status hidden">
+      <div class="row-between"><span id="uploadLabel">Subiendo…</span><span id="uploadCount"></span></div>
+      <div class="bar"><div id="uploadBar" class="bar-fill"></div></div>
+    </section>
+
+    <section class="stats" id="stats">
+      <div class="stat"><span class="stat-label">Archivos</span><span class="stat-value" id="statTotal">0</span></div>
+      <div class="stat"><span class="stat-label">En cola</span><span class="stat-value" id="statQueued">0</span></div>
+      <div class="stat"><span class="stat-label">Procesando</span><span class="stat-value" id="statActive">0</span></div>
+      <div class="stat good"><span class="stat-label">Humana</span><span class="stat-value" id="statHuman">0</span></div>
+      <div class="stat bad"><span class="stat-label">IA</span><span class="stat-value" id="statAi">0</span></div>
+      <div class="stat warn"><span class="stat-label">Errores</span><span class="stat-value" id="statError">0</span></div>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <input id="search" class="input" type="search" placeholder="Buscar archivo…" />
+          <select id="filter" class="input select">
+            <option value="all">Todos</option>
+            <option value="ai">Solo IA</option>
+            <option value="human">Solo humanas</option>
+            <option value="active">En proceso</option>
+            <option value="error">Con error</option>
+          </select>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn" id="btnQueue">▶ Analizar cola</button>
+          <button class="btn ghost" id="btnRetry">↻ Reintentar fallidos</button>
+          <a class="btn ghost" id="btnExport" href="/api/export.csv">⬇ CSV</a>
+          <button class="btn ghost" id="btnClear">Limpiar</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-file">Archivo</th>
+              <th>Estado</th>
+              <th class="col-ai">Probabilidad IA</th>
+              <th>Predicción</th>
+              <th>Fuente probable</th>
+              <th>Duración</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div id="empty" class="empty">
+          <p>Aún no hay canciones.</p>
+          <p class="muted">Suelta archivos arriba para empezar.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>
+        Resultados probabilísticos de ACRCloud AI Music Detection (umbral 50 %). No son prueba definitiva de autoría.
+        <span id="footerConfig"></span>
+      </p>
+    </footer>
+  </main>
+
+  <dialog id="settingsDialog" class="dialog">
+    <form method="dialog" class="dialog-body" id="settingsForm">
+      <header class="dialog-head">
+        <h2>Ajustes de ACRCloud</h2>
+        <button class="icon-btn" value="cancel" aria-label="Cerrar">✕</button>
+      </header>
+
+      <label class="field">
+        <span>API token (Bearer)</span>
+        <input id="setToken" type="password" autocomplete="off" placeholder="Pega el token de Consola → Account → Developer" />
+        <small>Se guarda solo en este equipo (<code>data/config.json</code>). Nunca se envía al navegador.</small>
+      </label>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>Región del contenedor</span>
+          <select id="setRegion" class="input select">
+            <option value="eu-west-1">eu-west-1 (Europa)</option>
+            <option value="us-west-2">us-west-2 (EE. UU.)</option>
+            <option value="ap-southeast-1">ap-southeast-1 (Asia)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Engine</span>
+          <select id="setEngine" class="input select">
+            <option value="5">5 · AI Music Detection (recomendado)</option>
+            <option value="1">1 · Fingerprinting + IA</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Buckets del proyecto (ids o nombres, separados por coma)</span>
+        <input id="setBuckets" class="input" placeholder="p. ej. 8881, 8882 o ACRCloud Music" />
+        <small>Obligatorio en la API. Usa el bucket que aparezca en tu consola; para detección IA el contenido del bucket no influye.</small>
+      </label>
+
+      <div class="grid-3">
+        <label class="field">
+          <span>Paralelo</span>
+          <input id="setConcurrency" class="input" type="number" min="1" max="8" />
+        </label>
+        <label class="field">
+          <span>Poll (ms)</span>
+          <input id="setPoll" class="input" type="number" min="500" step="500" />
+        </label>
+        <label class="field">
+          <span>Timeout (min)</span>
+          <input id="setTimeout" class="input" type="number" min="0.5" step="0.5" />
+        </label>
+      </div>
+
+      <div class="checks">
+        <label class="check"><input id="setAutoQueue" type="checkbox" /> Encolar automáticamente al subir</label>
+        <label class="check"><input id="setDemo" type="checkbox" /> Modo demo (resultados simulados)</label>
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost" id="btnTest">Probar conexión</button>
+        <button type="button" class="btn ghost danger" id="btnResetContainers">Borrar contenedores remotos</button>
+        <button type="submit" class="btn primary" id="btnSave">Guardar</button>
+      </div>
+      <p id="settingsMsg" class="settings-msg"></p>
+    </form>
+  </dialog>
+
+  <dialog id="helpDialog" class="dialog">
+    <form method="dialog" class="dialog-body">
+      <header class="dialog-head">
+        <h2>Cómo funciona</h2>
+        <button class="icon-btn" value="cancel" aria-label="Cerrar">✕</button>
+      </header>
+      <ol class="help-list">
+        <li><strong>Token.</strong> En la consola de ACRCloud: Account → Developer → crea un API token. Pégalo en Ajustes.</li>
+        <li><strong>Bucket.</strong> Copia el id o nombre del bucket de tu proyecto (Consola → Buckets). La API exige <code>buckets</code>.</li>
+        <li><strong>Sube el lote.</strong> Cada archivo se sube a ACRCloud (S3 prefirmado), entra en cola y espera resultados.</li>
+        <li><strong>Resultado.</strong> ACRCloud devuelve <code>ai_probability</code> (0–100) y <code>prediction</code> (<code>ai_generated</code> si ≥ 50 %).</li>
+        <li><strong>Detalle.</strong> Pulsa una fila: verás stems (voz/acompañamiento), fuentes IA probables y segmentos.</li>
+      </ol>
+      <p class="muted">La detección es probabilística; acompáñala de revisión humana para decisiones sensibles.</p>
+    </form>
+  </dialog>
+
+  <dialog id="detailDialog" class="dialog wide">
+    <form method="dialog" class="dialog-body" id="detailBody"></form>
+  </dialog>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

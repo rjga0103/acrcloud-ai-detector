@@ -1,0 +1,14 @@
+{
+  "name": "acrcloud-ai-detector",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cola local para detectar musica generada por IA con ACRCloud File Scanning (engine 5)",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}
