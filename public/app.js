@@ -12,6 +12,14 @@ const els = {
   uploadLabel: document.getElementById('uploadLabel'),
   uploadCount: document.getElementById('uploadCount'),
   uploadBar: document.getElementById('uploadBar'),
+  usageSub: document.getElementById('usageSub'),
+  usageBadge: document.getElementById('usageBadge'),
+  usageFill: document.getElementById('usageFill'),
+  usageUsed: document.getElementById('usageUsed'),
+  usageLeft: document.getElementById('usageLeft'),
+  usageFiles: document.getElementById('usageFiles'),
+  usageCycle: document.getElementById('usageCycle'),
+  usageHint: document.getElementById('usageHint'),
   stats: {
     total: document.getElementById('statTotal'),
     queued: document.getElementById('statQueued'),
@@ -33,6 +41,7 @@ const app = {
   files: [],
   counts: {},
   container: null,
+  usage: null,
   uploads: { active: 0, total: 0, loaded: 0, size: 0, ok: 0, failed: 0 }
 };
 
@@ -66,8 +75,59 @@ function fmtSize(bytes) {
   return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-function timeAgo(iso) {
-  if (!iso) return '';
+function fmtMinutes(seconds) {
+  const s = Math.max(0, Number(seconds) || 0);
+  if (s >= 3600) {
+    const h = Math.floor(s / 3600);
+    const m = Math.round((s % 3600) / 60);
+    return `${h} h ${m} min`;
+  }
+  const m = s / 60;
+  const txt = m >= 10 ? String(Math.round(m)) : String(Math.round(m * 10) / 10).replace('.', ',');
+  return `${txt} min`;
+}
+
+function fmtDay(iso) {
+  if (!iso) return '—';
+  const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+}
+
+function renderUsage(u) {
+  if (!u) return;
+  const quota = Number(u.quotaSeconds) || 0;
+  const pct = u.percent;
+  els.usageUsed.textContent = fmtMinutes(u.seconds);
+  els.usageCycle.textContent = `${fmtDay(u.cycleStart)} → ${fmtDay(u.cycleEnd)}` +
+    (u.daysLeft != null ? ` · ${u.daysLeft} d` : '');
+  els.usageFill.style.width = `${pct == null ? 0 : Math.max(0, Math.min(100, pct))}%`;
+
+  if (quota > 0) {
+    els.usageBadge.textContent = `${pct} % del plan`;
+    els.usageBadge.className = `badge ${pct >= 90 ? 'err' : pct >= 70 ? 'warnb' : 'human'}`;
+    els.usageSub.textContent = `${u.files} pista(s) · media ${u.avgSeconds ? fmtMinutes(u.avgSeconds) : '—'} · plan de ${Math.round(quota / 60)} min`;
+    els.usageLeft.textContent = fmtMinutes(u.remainingSeconds);
+    els.usageFiles.textContent = u.remainingFiles == null ? '—' : `~${u.remainingFiles}`;
+    const extra = [];
+    if (u.credits != null) extra.push(`Créditos: ${u.credits}`);
+    if (u.nextBillDate) extra.push(`Próximo cobro: ${fmtDay(u.nextBillDate)}`);
+    els.usageHint.textContent = extra.join(' · ');
+    els.usageHint.className = 'usage-hint';
+  } else {
+    els.usageBadge.textContent = 'Cuota sin configurar';
+    els.usageBadge.className = 'badge warnb';
+    els.usageSub.textContent = `${u.files} pista(s) en el ciclo` +
+      (u.avgSeconds ? ` · media ${fmtMinutes(u.avgSeconds)}` : '');
+    els.usageLeft.textContent = '—';
+    els.usageFiles.textContent = '—';
+    els.usageHint.textContent =
+      'ACRCloud no expone la cuota restante por API. Escribe los minutos de tu plan en Ajustes para estimar cuántas detecciones quedan.';
+    els.usageHint.className = 'usage-hint warn';
+  }
+}
+
+function timeAgo(iso) {  if (!iso) return '';
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
   if (diff < 60) return 'hace un momento';
   if (diff < 3600) return `hace ${Math.round(diff / 60)} min`;
@@ -110,6 +170,7 @@ async function refresh() {
     app.files = data.files;
     app.counts = data.counts;
     app.container = data.container;
+    app.usage = data.usage;
     renderChrome();
     if (changed) renderTable();
   } catch (err) {
@@ -136,6 +197,7 @@ function renderChrome() {
   }
   els.footerConfig.textContent =
     `Región ${c.region} · engine ${c.engine} · paralelo ${c.concurrency} · contenedor ${app.container?.id || '—'}.`;
+  renderUsage(app.usage);
 
   const active = (app.counts.uploading || 0) + (app.counts.processing || 0);
   els.stats.total.textContent = app.files.length;
@@ -406,6 +468,8 @@ function fillSettings() {
   document.getElementById('setTimeout').value = Math.round((c.timeoutMs || 600000) / 60000);
   document.getElementById('setAutoQueue').checked = Boolean(c.autoQueue);
   document.getElementById('setDemo').checked = Boolean(c.demo);
+  document.getElementById('setQuota').value = c.planQuotaMinutes ?? 0;
+  document.getElementById('setCycleDay').value = c.cycleDay ?? 1;
   settingsMsg.textContent = '';
   settingsMsg.className = 'settings-msg';
 }
@@ -421,7 +485,9 @@ async function saveSettings(event) {
     pollMs: Number(document.getElementById('setPoll').value),
     timeoutMs: Number(document.getElementById('setTimeout').value) * 60000,
     autoQueue: document.getElementById('setAutoQueue').checked,
-    demo: document.getElementById('setDemo').checked
+    demo: document.getElementById('setDemo').checked,
+    planQuotaMinutes: Number(document.getElementById('setQuota').value) || 0,
+    cycleDay: Number(document.getElementById('setCycleDay').value) || 1
   };
   const token = document.getElementById('setToken').value.trim();
   if (token) payload.token = token;

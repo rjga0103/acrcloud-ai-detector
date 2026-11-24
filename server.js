@@ -15,6 +15,7 @@ import {
 import * as store from './lib/store.js';
 import { startWorker, wake, queueIds, cleanupFile } from './lib/pipeline.js';
 import * as acr from './lib/acr.js';
+import * as usageMeter from './lib/usage.js';
 import { toCsv } from './lib/parse.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -172,12 +173,41 @@ async function handleStatic(req, res, pathname) {
 const routes = [
   ['GET', /^\/api\/state$/, async (req, res) => {
     const cfg = getConfig();
+    let billing = {};
+    if (cfg.token && !cfg.demo) {
+      try {
+        billing = await acr.getBilling(cfg);
+      } catch {
+        billing = {};
+      }
+    }
+    const bounds = usageMeter.cycleBounds(billing.nextBillDate, cfg.cycleDay);
+    const totals = usageMeter.windowTotals(store.state.usage, bounds.start, bounds.end);
+    const quotaSeconds = Math.max(0, Number(cfg.planQuotaMinutes) || 0) * 60;
+    const avgSeconds = totals.files ? Math.round((totals.seconds / totals.files) * 10) / 10 : 0;
+    const remainingSeconds = quotaSeconds > 0 ? Math.max(0, quotaSeconds - totals.seconds) : null;
+    const usage = {
+      cycleStart: usageMeter.dayKey(bounds.start),
+      cycleEnd: usageMeter.dayKey(bounds.end),
+      daysLeft: usageMeter.daysLeft(bounds.end),
+      seconds: totals.seconds,
+      files: totals.files,
+      avgSeconds,
+      quotaSeconds,
+      remainingSeconds,
+      remainingFiles: usageMeter.estimateRemaining(remainingSeconds, avgSeconds),
+      percent: quotaSeconds > 0 ? Math.min(100, Math.round((totals.seconds / quotaSeconds) * 1000) / 10) : null,
+      nextBillDate: billing.nextBillDate || null,
+      credits: billing.availableCredits ?? null,
+      billingError: billing.error || null
+    };
     sendJson(res, 200, {
       config: sanitizeConfig(cfg),
       files: store.state.files.map(store.publicFile),
       counts: store.countByStatus(),
       container: store.state.container,
       containers: store.state.containers,
+      usage,
       uptime: process.uptime()
     });
   }],

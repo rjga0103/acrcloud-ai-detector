@@ -70,11 +70,33 @@ Fuentes:
 4. El total se pondera por duración de cada stem.
 5. `humanProbability = 100 - aiProbability`; confianza = distancia al 50 %.
 
+### Cuota y detecciones restantes
+
+ACRCloud **no expone la cuota restante** en su API de File Scanning. Comprobado contra la cuenta real:
+
+| Endpoint | Estado | Devuelve |
+| --- | --- | --- |
+| `GET /api/billing/next-bill-date` | 200 | `next_bill_date`, `left_days` (sirve para el ciclo) |
+| `GET /api/billing/preferences` | 200 | email, uid, `billing_cycle_type` |
+| `GET /api/billing/available-credits` | 200 | `{"avaliable":0}` (así, con la errata) |
+| `GET /api/billing/current-bill` | 200 | `{"data":[]}` sin cargos |
+| `GET /api/billing/current-bills`, `/bills`, `/due-bills` | 400 | sin permiso con token de proyecto |
+
+Los límites de plan (minutos incluidos, contenedores) solo se ven en la consola web. Por eso la app:
+
+1. Lleva un **ledger local** (`data/db.json` → `usage`) con los segundos que ACRCloud dice haber analizado, por día.
+2. Usa la **fecha de próximo cobro** para calcular el ciclo (o el día de corte configurado).
+3. Si pones la **cuota del plan en minutos** (Ajustes), muestra consumido, restante, % y **detecciones restantes estimadas** = restante ÷ duración media.
+4. El consumo no se reinicia al limpiar la lista: es histórico de facturación. Borrar `data/db.json` lo reinicia.
+5. La detección por archivo se limita a **900 s** por la propia API.
+
+Cómo saber tu cuota real: consola ACRCloud → *Billing* / *Usage* del proyecto, o el contrato del plan.
+
 ## 5. API propia
 
 | Método | Ruta | Uso |
 | --- | --- | --- |
-| GET | `/api/state` | Config saneada, archivos, contadores |
+| GET | `/api/state` | Config saneada, archivos, contadores y **consumo del ciclo** |
 | POST | `/api/config` | Guardar token/región/engine/buckets/paralelo |
 | POST | `/api/test` | Validar token |
 | POST | `/api/upload?name=&batch=` | Subir bytes crudos de un archivo |
@@ -111,7 +133,9 @@ tests/               pruebas del parser y flujo completo contra un ACRCloud fals
   "pollMs": 2500,
   "timeoutMs": 600000,
   "demo": false,
-  "autoQueue": true
+  "autoQueue": true,
+  "planQuotaMinutes": 120,
+  "cycleDay": 1
 }
 ```
 

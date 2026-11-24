@@ -50,6 +50,24 @@
       <div class="stat warn"><span class="stat-label">Errores</span><span class="stat-value" id="statError">0</span></div>
     </section>
 
+    <section class="usage-panel" id="usagePanel">
+      <div class="usage-head">
+        <div>
+          <h3>Consumo del plan</h3>
+          <p id="usageSub" class="muted">Cargando…</p>
+        </div>
+        <span id="usageBadge" class="badge">—</span>
+      </div>
+      <div class="bar"><div id="usageFill" class="bar-fill"></div></div>
+      <div class="usage-grid">
+        <div><span>Analizado este ciclo</span><b id="usageUsed">—</b></div>
+        <div><span>Restante</span><b id="usageLeft">—</b></div>
+        <div><span>Detecciones restantes</span><b id="usageFiles">—</b></div>
+        <div><span>Ciclo</span><b id="usageCycle">—</b></div>
+      </div>
+      <p id="usageHint" class="usage-hint"></p>
+    </section>
+
     <section class="panel">
       <div class="toolbar">
         <div class="toolbar-left">
@@ -137,6 +155,18 @@
         <small>Obligatorio en la API. Usa el bucket que aparezca en tu consola; para detección IA el contenido del bucket no influye.</small>
       </label>
 
+      <div class="grid-2">
+        <label class="field">
+          <span>Cuota del plan (minutos por ciclo)</span>
+          <input id="setQuota" class="input" type="number" min="0" step="1" />
+          <small>ACRCloud no expone la cuota por API. Copia los minutos de tu plan desde la consola. 0 = no calcular.</small>
+        </label>
+        <label class="field">
+          <span>Día de corte (si falta la fecha de cobro)</span>
+          <input id="setCycleDay" class="input" type="number" min="1" max="28" />
+        </label>
+      </div>
+
       <div class="grid-3">
         <label class="field">
           <span>Paralelo</span>
@@ -178,6 +208,7 @@
         <li><strong>Sube el lote.</strong> Cada archivo se sube a ACRCloud (S3 prefirmado), entra en cola y espera resultados.</li>
         <li><strong>Resultado.</strong> ACRCloud devuelve <code>ai_probability</code> (0–100) y <code>prediction</code> (<code>ai_generated</code> si ≥ 50 %).</li>
         <li><strong>Detalle.</strong> Pulsa una fila: verás stems (voz/acompañamiento), fuentes IA probables y segmentos.</li>
+        <li><strong>Cuota.</strong> ACRCloud no publica las detecciones restantes. La app mide el audio analizado; escribe los minutos de tu plan en Ajustes para ver el consumo y una estimación de pistas restantes.</li>
       </ol>
       <p class="muted">La detección es probabilística; acompáñala de revisión humana para decisiones sensibles.</p>
     </form>
