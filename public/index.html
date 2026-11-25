@@ -185,7 +185,12 @@
       <div class="checks">
         <label class="check"><input id="setAutoQueue" type="checkbox" /> Encolar automáticamente al subir</label>
         <label class="check"><input id="setDemo" type="checkbox" /> Modo demo (resultados simulados)</label>
+        <label class="check"><input id="setFailover" type="checkbox" /> Cambiar de región si se llena</label>
       </div>
+      <p class="muted" style="font-size:11.5px;margin-top:-6px">
+        El failover cambia a otra región de ACRCloud cuando la actual agota capacidad. Misma cuenta y plan:
+        no añade cuota real y puede incumplir el uso razonable del servicio. Los resultados remotos quedan repartidos por región.
+      </p>
 
       <div class="dialog-actions">
         <button type="button" class="btn ghost" id="btnTest">Probar conexión</button>

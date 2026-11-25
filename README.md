@@ -136,7 +136,8 @@ tests/               pruebas del parser y flujo completo contra un ACRCloud fals
   "demo": false,
   "autoQueue": true,
   "planQuotaMinutes": 120,
-  "cycleDay": 1
+  "cycleDay": 1,
+  "autoRegionFailover": false
 }
 ```
 
@@ -171,5 +172,10 @@ resumen, además de casos del parser (stems, segmentos, umbral 50 %, CSV).
   (huellas del catálogo), no de análisis. Los límites reales están en `GET /api/limits/current`:
   `fs: {containers: 10, size: 300}` y `GET /api/users/:uid` → `limit_type: FreeTrial`, `left_days`.
   `fs.size` se consume por tamaño de audio subido (36 min de WAV ≈ 380 MB), no por minutos.
+- **Failover de región (opcional).** Ajustes → *Cambiar de región si se llena*. Si la subida devuelve
+  `size exceeds limits`, la app marca esa región como agotada 6 h, cambia `region`, crea contenedor
+  nuevo y reintenta. No borra contenedores (conserva resultados remotos). Aviso: usa la **misma
+  cuenta y plan**, no añade cuota real, reparte los resultados por región y puede chocar con el uso
+  razonable del servicio. Si las tres regiones se agotan, el error lo dice y no insiste.
 - Un token caducado devuelve 401: genera uno nuevo y pégalo en Ajustes.
 - Los resultados son orientativos. No los uses como única prueba en decisiones legales o de moderación.

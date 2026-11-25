@@ -41,6 +41,7 @@ const app = {
   files: [],
   counts: {},
   container: null,
+  failedRegions: {},
   usage: null,
   uploads: { active: 0, total: 0, loaded: 0, size: 0, ok: 0, failed: 0 }
 };
@@ -170,6 +171,7 @@ async function refresh() {
     app.files = data.files;
     app.counts = data.counts;
     app.container = data.container;
+    app.failedRegions = data.failedRegions || {};
     app.usage = data.usage;
     renderChrome();
     if (changed) renderTable();
@@ -195,8 +197,11 @@ function renderChrome() {
     els.statusChip.className = 'chip bad';
     els.demoBanner.classList.add('hidden');
   }
+  const failed = Object.keys(app.failedRegions || {});
   els.footerConfig.textContent =
-    `Región ${c.region} · engine ${c.engine} · paralelo ${c.concurrency} · contenedor ${app.container?.id || '—'}.`;
+    `Región ${c.region} · engine ${c.engine} · paralelo ${c.concurrency} · contenedor ${app.container?.id || '—'}` +
+    (failed.length ? ` · sin cupo: ${failed.join(', ')}` : '') +
+    '.';
   renderUsage(app.usage);
 
   const active = (app.counts.uploading || 0) + (app.counts.processing || 0);
@@ -468,6 +473,7 @@ function fillSettings() {
   document.getElementById('setTimeout').value = Math.round((c.timeoutMs || 600000) / 60000);
   document.getElementById('setAutoQueue').checked = Boolean(c.autoQueue);
   document.getElementById('setDemo').checked = Boolean(c.demo);
+  document.getElementById('setFailover').checked = Boolean(c.autoRegionFailover);
   document.getElementById('setQuota').value = c.planQuotaMinutes ?? 0;
   document.getElementById('setCycleDay').value = c.cycleDay ?? 1;
   settingsMsg.textContent = '';
@@ -486,6 +492,7 @@ async function saveSettings(event) {
     timeoutMs: Number(document.getElementById('setTimeout').value) * 60000,
     autoQueue: document.getElementById('setAutoQueue').checked,
     demo: document.getElementById('setDemo').checked,
+    autoRegionFailover: document.getElementById('setFailover').checked,
     planQuotaMinutes: Number(document.getElementById('setQuota').value) || 0,
     cycleDay: Number(document.getElementById('setCycleDay').value) || 1
   };

@@ -216,6 +216,7 @@ const routes = [
       counts: store.countByStatus(),
       container: store.state.container,
       containers: store.state.containers,
+      failedRegions: store.state.failedRegions,
       usage,
       uptime: process.uptime()
     });
@@ -227,6 +228,12 @@ const routes = [
     const next = setConfig(patch);
     if (patch.token != null && patch.token !== before.token) {
       store.state.containers = {};
+      store.state.failedRegions = {};
+      store.save();
+    }
+    if (patch.region && patch.region !== before.region) {
+      // cambio manual de región: vuelve a probar todas
+      store.state.failedRegions = {};
       store.save();
     }
     sendJson(res, 200, { config: sanitizeConfig(next) });
