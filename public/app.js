@@ -625,6 +625,21 @@ document.getElementById('btnSettings').addEventListener('click', () => {
 document.getElementById('btnHelp').addEventListener('click', () => helpDialog.showModal());
 document.getElementById('settingsForm').addEventListener('submit', saveSettings);
 document.getElementById('btnTest').addEventListener('click', testConnection);
+document.getElementById('btnRotate').addEventListener('click', async () => {
+  if (!confirm('¿Borrar el contenedor actual y crear otro? Se pierden los resultados remotos; los locales se conservan.')) return;
+  settingsMsg.textContent = 'Creando contenedor…';
+  settingsMsg.className = 'settings-msg';
+  try {
+    const data = await postJson('/api/container/rotate', {});
+    settingsMsg.textContent = `Contenedor nuevo: ${data.id}`;
+    settingsMsg.className = 'settings-msg ok';
+    await refresh();
+  } catch (err) {
+    settingsMsg.textContent = err.message;
+    settingsMsg.className = 'settings-msg bad';
+  }
+});
+
 document.getElementById('btnResetContainers').addEventListener('click', async () => {
   if (!confirm('¿Borrar los contenedores de File Scanning creados por esta app en ACRCloud?')) return;
   settingsMsg.textContent = 'Borrando…';

@@ -13,7 +13,7 @@ import {
   UPLOAD_DIR
 } from './lib/config.js';
 import * as store from './lib/store.js';
-import { startWorker, wake, queueIds, cleanupFile } from './lib/pipeline.js';
+import { startWorker, wake, queueIds, cleanupFile, rotateContainerForUser } from './lib/pipeline.js';
 import * as acr from './lib/acr.js';
 import * as usageMeter from './lib/usage.js';
 import { toCsv } from './lib/parse.js';
@@ -181,7 +181,16 @@ const routes = [
         billing = {};
       }
     }
-    const bounds = usageMeter.cycleBounds(billing.nextBillDate, cfg.cycleDay);
+    const bounds0 = billing.nextBillDate || null;
+    let anchor = bounds0;
+    if (anchor) {
+      const days = Math.round(
+        (new Date(`${anchor}T00:00:00Z`) - new Date(`${usageMeter.dayKey(new Date())}T00:00:00Z`)) / 86400000
+      );
+      // en cuentas sin suscripción la API devuelve "hoy + 30": no sirve como ancla de ciclo
+      if (Math.abs(days - 30) <= 1) anchor = null;
+    }
+    const bounds = usageMeter.cycleBounds(anchor, cfg.cycleDay);
     const totals = usageMeter.windowTotals(store.state.usage, bounds.start, bounds.end);
     const quotaSeconds = Math.max(0, Number(cfg.planQuotaMinutes) || 0) * 60;
     const avgSeconds = totals.files ? Math.round((totals.seconds / totals.files) * 10) / 10 : 0;
@@ -297,6 +306,13 @@ const routes = [
     store.state.files = keep;
     store.save();
     sendJson(res, 200, { removed });
+  }],
+
+  ['POST', /^\/api\/container\/rotate$/, async (req, res) => {
+    const cfg = getConfig();
+    if (cfg.demo || !cfg.token) return fail(res, 400, 'Necesitas token de ACRCloud para rotar el contenedor');
+    const id = await rotateContainerForUser();
+    sendJson(res, 200, { id, container: store.state.container });
   }],
 
   ['POST', /^\/api\/container\/reset$/, async (req, res) => {

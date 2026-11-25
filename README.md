@@ -85,7 +85,8 @@ ACRCloud **no expone la cuota restante** en su API de File Scanning. Comprobado 
 Los límites de plan (minutos incluidos, contenedores) solo se ven en la consola web. Por eso la app:
 
 1. Lleva un **ledger local** (`data/db.json` → `usage`) con los segundos que ACRCloud dice haber analizado, por día.
-2. Usa la **fecha de próximo cobro** para calcular el ciclo (o el día de corte configurado).
+2. Usa la **fecha de próximo cobro** para calcular el ciclo (o el día de corte configurado). Si esa
+   fecha es simplemente «hoy + 30 días» (cuentas sin suscripción), se ignora y manda el día de corte.
 3. Si pones la **cuota del plan en minutos** (Ajustes), muestra consumido, restante, % y **detecciones restantes estimadas** = restante ÷ duración media.
 4. El consumo no se reinicia al limpiar la lista: es histórico de facturación. Borrar `data/db.json` lo reinicia.
 5. La detección por archivo se limita a **900 s** por la propia API.
@@ -161,5 +162,11 @@ resumen, además de casos del parser (stems, segmentos, umbral 50 %, CSV).
   región + engine y lo reutiliza. Si aun así aparece `Your containers exceeds limits`, ve a
   **Ajustes → Borrar contenedores remotos**: elimina los de esta app y, si quedan ajenos, ofrece
   borrarlos también. La cola se recupera sola: si el plan está lleno, purga lo suyo y reintenta una vez.
+- **Capacidad de audio agotada.** Si la subida falla en el paso de metadatos con
+  `Your container's size exceeds limits` y un contenedor **vacío** también falla, el límite es de la
+  **cuenta**, no del contenedor: el plan agotó los segundos de audio (trial gratuito de 14 días o
+  capacidad del ciclo). Rotar contenedores o borrar archivos **no** lo libera. Comprueba Billing/Usage
+  en la consola, espera el nuevo ciclo o amplía el plan. La app muestra ese mensaje de forma explícita
+  y no reintenta en bucle.
 - Un token caducado devuelve 401: genera uno nuevo y pégalo en Ajustes.
 - Los resultados son orientativos. No los uses como única prueba en decisiones legales o de moderación.
