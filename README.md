@@ -162,11 +162,14 @@ resumen, además de casos del parser (stems, segmentos, umbral 50 %, CSV).
   región + engine y lo reutiliza. Si aun así aparece `Your containers exceeds limits`, ve a
   **Ajustes → Borrar contenedores remotos**: elimina los de esta app y, si quedan ajenos, ofrece
   borrarlos también. La cola se recupera sola: si el plan está lleno, purga lo suyo y reintenta una vez.
-- **Capacidad de audio agotada.** Si la subida falla en el paso de metadatos con
-  `Your container's size exceeds limits` y un contenedor **vacío** también falla, el límite es de la
-  **cuenta**, no del contenedor: el plan agotó los segundos de audio (trial gratuito de 14 días o
-  capacidad del ciclo). Rotar contenedores o borrar archivos **no** lo libera. Comprueba Billing/Usage
-  en la consola, espera el nuevo ciclo o amplía el plan. La app muestra ese mensaje de forma explícita
-  y no reintenta en bucle.
+- **Capacidad de almacenamiento de File Scanning (por región).** Si el último paso de la subida
+  (`POST …/files`) responde `Your container's size exceeds limits`, incluso con un contenedor vacío,
+  esa **región** se quedó sin capacidad. Comprobado en la cuenta real: `eu-west-1` bloqueaba y el
+  mismo archivo funcionó en `us-west-2` con un contenedor nuevo. Borrar archivos o rotar contenedor
+  **no** lo libera. Solución: cambia la región en Ajustes o amplía el plan.
+- **La página de límites engaña.** `File Bucket Capacity Limit 300 Min` es capacidad de *buckets*
+  (huellas del catálogo), no de análisis. Los límites reales están en `GET /api/limits/current`:
+  `fs: {containers: 10, size: 300}` y `GET /api/users/:uid` → `limit_type: FreeTrial`, `left_days`.
+  `fs.size` se consume por tamaño de audio subido (36 min de WAV ≈ 380 MB), no por minutos.
 - Un token caducado devuelve 401: genera uno nuevo y pégalo en Ajustes.
 - Los resultados son orientativos. No los uses como única prueba en decisiones legales o de moderación.

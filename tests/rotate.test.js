@@ -112,7 +112,7 @@ function makeRecord(id, name) {
 test('capacidad de audio agotada: error claro y sin rotar contenedor', async () => {
   stats.mode = 'quota';
   makeRecord('rec-quota', 'quota.mp3');
-  await assert.rejects(() => runFile(store.getFile('rec-quota')), /Cuota de audio agotada/i);
+  await assert.rejects(() => runFile(store.getFile('rec-quota')), /Capacidad de almacenamiento/i);
   assert.equal(stats.creates, 1, 'solo el contenedor inicial');
   assert.equal(stats.deletes, 0, 'no borra contenedores inútilmente');
   assert.equal(store.state.container.id, 501);
